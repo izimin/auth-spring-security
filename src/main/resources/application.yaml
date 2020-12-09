@@ -1,0 +1,85 @@
+spring:
+  application:
+    name: auth
+  session:
+    timeout: 360000
+    store-type: jdbc
+    jdbc:
+      initialize-schema: always
+      table-name: auth.spring_session
+
+  liquibase:
+    change-log: classpath:db/changelog-master.xml
+    url:
+    user:
+    password:
+    enabled: true
+    default-schema: auth
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 215MB
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQL95Dialect
+    generate-ddl: false
+    show-sql: true
+    database: postgresql
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: auth
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  transaction:
+    default-timeout: 30
+
+  thymeleaf:
+    cache: false
+
+  datasource:
+    url:
+    username:
+    password:
+
+    hikari:
+      minimum-idle: 6
+      maximum-pool-size: 800
+      connection-timeout: 5000
+      idle-timeout: 60000
+
+server:
+  port: 54654
+  tomcat:
+    max-threads: 300
+
+logging:
+  pattern:
+    console: "%d{dd.MM.yy HH:mm:ss.SSS} [%thread] |%X{req.ses}|%X{req.id}|%X{user}|%X{SCG} %-5level %logger{36} - %msg%n"
+  level:
+
+    ru:
+      students: debug
+
+    org:
+      springframework:
+        statemachine: info
+
+        context:
+          support:
+            PropertySourcesPlaceholderConfigurer: debug
+        security:
+          web: info
+
+    com:
+      zaxxer:
+        hikari:
+          HikariConfig: debug
+          pool:
+            HikariPool: debug

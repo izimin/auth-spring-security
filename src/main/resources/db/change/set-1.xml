@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+    <changeSet id="20191104:1-1" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM information_schema.schemata WHERE schema_name = 'auth');
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            CREATE SCHEMA auth;
+        </sql>
+    </changeSet>
+
+    <changeSet id="20191104:1-2" author="students">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="auth" tableName="systems"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE auth.systems
+            (
+                system_id   uuid    NOT NULL,
+                system_name varchar NOT NULL
+            );
+
+            CREATE UNIQUE INDEX systems_id_uindex
+                ON auth.systems (system_id);
+
+            CREATE UNIQUE INDEX systems_name_uindex
+                ON auth.systems (system_name);
+
+            ALTER TABLE auth.systems
+                ADD CONSTRAINT systems_pk
+                    PRIMARY KEY USING INDEX systems_id_uindex;
+        </sql>
+    </changeSet>
+
+    <changeSet id="20191104:1-3" author="students">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="auth" tableName="algorithms"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE auth.algorithms
+            (
+                algorithm_id   uuid    NOT NULL,
+                algorithm_name varchar NOT NULL,
+                system_id      uuid    NOT NULL
+            );
+
+            CREATE UNIQUE INDEX algorithms_id_uindex
+                ON auth.algorithms (algorithm_id);
+
+            CREATE UNIQUE INDEX algorithms_name_uindex
+                ON auth.algorithms (algorithm_name);
+
+            ALTER TABLE auth.algorithms
+                ADD CONSTRAINT algorithms_pk
+                    PRIMARY KEY USING INDEX algorithms_id_uindex;
+
+            ALTER TABLE auth.algorithms
+                ADD CONSTRAINT algorithms_systems_fk
+                    FOREIGN KEY (system_id) REFERENCES auth.systems (system_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="20191104:1-4" author="students">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="auth" tableName="phone_codes"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE auth.phone_codes
+            (
+                phone_code_id    uuid    NOT NULL,
+                phone_code_value integer NOT NULL,
+                system_id        uuid    NOT NULL
+            );
+
+            CREATE UNIQUE INDEX phone_codes_id_uindex
+                ON auth.phone_codes (phone_code_id);
+
+            CREATE UNIQUE INDEX phone_codes_value_uindex
+                ON auth.phone_codes (phone_code_value);
+
+            ALTER TABLE auth.phone_codes
+                ADD CONSTRAINT phone_codes_pk
+                    PRIMARY KEY USING INDEX phone_codes_id_uindex;
+
+            ALTER TABLE auth.phone_codes
+                ADD CONSTRAINT phone_codes_systems_fk
+                    FOREIGN KEY (system_id) REFERENCES auth.systems (system_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="20191104:1-5" author="students">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="auth" tableName="users"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE auth.users
+            (
+                user_id       uuid    NOT NULL,
+                login         varchar NOT NULL,
+                email         varchar,
+                phone         integer,
+                phone_code_id uuid,
+                first_name    varchar NOT NULL,
+                last_name     varchar NOT NULL,
+                patronym      varchar,
+                hash          varchar    NOT NULL,
+                salt          varchar    NOT NULL,
+                system_id     uuid    NOT NULL,
+                algorithm_id  uuid    NOT NULL
+            );
+
+            CREATE UNIQUE INDEX users_id_uindex
+                ON auth.users (user_id);
+
+            CREATE UNIQUE INDEX users_login_uindex
+                ON auth.users (login);
+
+            CREATE UNIQUE INDEX users_email_uindex
+                ON auth.users (email);
+
+            CREATE UNIQUE INDEX users_phone_uindex
+                ON auth.users (phone);
+
+            CREATE UNIQUE INDEX users_hash_uindex
+                ON auth.users (hash);
+
+            CREATE UNIQUE INDEX users_salt_uindex
+                ON auth.users (salt);
+
+            ALTER TABLE auth.users
+                ADD CONSTRAINT users_pk
+                    PRIMARY KEY USING INDEX users_id_uindex;
+
+            ALTER TABLE auth.users
+                ADD CONSTRAINT users_phone_codes_fk
+                    FOREIGN KEY (phone_code_id) REFERENCES auth.phone_codes (phone_code_id);
+
+            ALTER TABLE auth.users
+                ADD CONSTRAINT users_systems_fk
+                    FOREIGN KEY (system_id) REFERENCES auth.systems (system_id);
+
+            ALTER TABLE auth.users
+                ADD CONSTRAINT users_algorithms_fk
+                    FOREIGN KEY (algorithm_id) REFERENCES auth.algorithms (algorithm_id);
+        </sql>
+    </changeSet>
+    
+    <changeSet id="20191104:1-6" author="students">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="auth" tableName="roles"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE auth.roles
+            (
+                role_id   uuid    NOT NULL,
+                role_name varchar NOT NULL,
+                system_id uuid    NOT NULL
+            );
+
+            CREATE UNIQUE INDEX roles_id_uindex
+                ON auth.roles (role_id);
+
+            CREATE UNIQUE INDEX roles_name_uindex
+                ON auth.roles (role_name);
+
+            ALTER TABLE auth.roles
+                ADD CONSTRAINT roles_pk
+                    PRIMARY KEY USING INDEX roles_id_uindex;
+
+            ALTER TABLE auth.roles
+                ADD CONSTRAINT roles_systems_fk
+                    FOREIGN KEY (system_id) REFERENCES auth.systems (system_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="20191110:1-7" author="students">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="auth" tableName="users_roles"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE auth.users_roles
+            (
+            user_id uuid NOT NULL,
+            role_id uuid NOT NULL
+            );
+
+            ALTER TABLE auth.users_roles
+            ADD CONSTRAINT users_fk
+            FOREIGN KEY (user_id) REFERENCES auth.users (user_id);
+
+            ALTER TABLE auth.users_roles
+            ADD CONSTRAINT roles_fk
+            FOREIGN KEY (role_id) REFERENCES auth.roles (role_id);
+        </sql>
+    </changeSet>
+    <changeSet id="20191224:1-8" author="students">
+        <sql>
+            ALTER TABLE auth.users ALTER COLUMN phone TYPE bigint;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

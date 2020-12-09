@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+    <changeSet id="20191110:2-1" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM pg_extension WHERE extname='uuid-ossp');
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            CREATE EXTENSION "uuid-ossp";
+        </sql>
+    </changeSet>
+    <changeSet id="20191110:2-2" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM auth.systems WHERE system_name='Test system');
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO auth.systems(system_id, system_name)
+            VALUES(uuid_generate_v1mc(), 'Test system');
+        </sql>
+    </changeSet>
+    <changeSet id="20191110:2-3" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM auth.algorithms WHERE algorithm_name='BCrypt');
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO auth.algorithms(algorithm_id, algorithm_name, system_id)
+            SELECT uuid_generate_v1mc(), 'BCrypt', system_id FROM auth.systems LIMIT 1;
+        </sql>
+    </changeSet>
+    <changeSet id="20191110:2-4" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM auth.roles WHERE role_name='ROLE_GUEST');
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            WITH
+                system_ids AS (
+                SELECT system_id FROM auth.systems LIMIT 1
+            ),
+            roles_joined_info AS (
+                SELECT system_id AS s_id, role_name
+                FROM (
+                    VALUES ('ROLE_GUEST'), ('ROLE_USER'), ('ROLE_ADMIN')
+                ) AS roles (role_name) JOIN system_ids ON TRUE
+            )
+            INSERT INTO auth.roles(role_id, role_name, system_id)
+            SELECT uuid_generate_v1mc(), role_name, s_id FROM roles_joined_info;
+        </sql>
+    </changeSet>
+    <changeSet id="20191111:2-5" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM auth.phone_codes WHERE phone_code_value=7);
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO auth.phone_codes(phone_code_id, phone_code_value, system_id)
+            SELECT uuid_generate_v1mc(), 7, system_id FROM auth.systems LIMIT 1;
+        </sql>
+    </changeSet>
+    <changeSet id="20191201:2-6" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(SELECT * FROM auth.users WHERE login='user');
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            WITH uids AS (
+                SELECT phone_code_id, algorithm_id, system_id
+                FROM
+                (SELECT phone_code_id FROM auth.phone_codes LIMIT 1) AS p_uid JOIN
+                (SELECT algorithm_id, system_id FROM auth.algorithms WHERE algorithm_name = 'BCrypt' LIMIT 1) AS a_uid
+                ON true
+            )
+            INSERT INTO auth.users
+                (user_id, login, email, phone, phone_code_id,
+                first_name, last_name, patronym,
+                hash, salt, system_id, algorithm_id)
+            SELECT
+                uuid_generate_v1mc(), 'user', 'e@mail.ru', 1002003004, phone_code_id,
+                'Пользователь', 'Пользователев', 'Пользователевич',
+                '$2a$10$3DLyTVMMwP2ENVvIsaELOOFyNrN6PI3R64JHeDA/A5cgsBqTG5x6u', '$2a$10$3DLyTVMMwP2ENVvIsaELOO',
+                system_id, algorithm_id
+            FROM uids;
+        </sql>
+    </changeSet>
+    <changeSet id="20191201:2-7" author="students">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="t">
+                SELECT NOT EXISTS(
+                    SELECT *
+                    FROM auth.users JOIN auth.users_roles ON users.user_id = users_roles.user_id
+                    WHERE login='user'
+                );
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            WITH uids AS (
+                SELECT user_id AS u_id, role_id AS r_id
+                FROM auth.users JOIN auth.roles ON true
+                WHERE login='user' AND role_name = 'ROLE_USER'
+                LIMIT 1
+            )
+            INSERT INTO auth.users_roles (user_id, role_id)
+            SELECT u_id, r_id FROM uids;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

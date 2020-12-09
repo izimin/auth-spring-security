@@ -1,0 +1,28 @@
+# curl --location --request POST 'authorization.students.alamics.ru/api/user/login'
+#--header 'Content-Type: application/json'
+#--data-raw '{
+#    "login": "user",
+#    "password": "password"
+#}'
+POST /api/user/login
+Content-Type: application/json
+
+{
+  "login": "user",
+  "password": "password"
+}
+
+> {%
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+client.test("Response content-type is json", function() {
+  var type = response.contentType.mimeType;
+  client.assert(type === "application/json", "Expected 'application/json' but received '" + type + "'");
+});
+client.test("Request returned UserDetails", function() {
+  client.assert(response.body.hasOwnProperty("login"), "Response does not contain UD");
+});
+%}
+
+###
